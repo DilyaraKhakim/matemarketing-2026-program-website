@@ -1,0 +1,19 @@
+# Publish only the application and its reproducible source files.
+/*
+!/.gitignore
+!/.nojekyll
+!/index.html
+!/app.js
+!/enhancements.js
+!/mobile.js
+!/enhancements.css
+!/import_program.py
+!/import_tracks.py
+!/build_site.py
+!/verify_program.cjs
+!/IMPORT_REPORT.json
+!/TRACK_IMPORT_REPORT.json
+!/program_6.csv
+!/program_6.md
+!/README.md
+!/Publish-GitHub.ps1
