@@ -62,7 +62,8 @@ function filterDialog(){
 const baseDetails=details;
 details=function(id){
  baseDetails(id);const t=talks.find(t=>t.id===id);
- modal.insertAdjacentHTML('beforeend',`${t.poster?`<figure class="detail-poster"><img src="${t.poster}" alt="Постер: ${esc(t.name)}"></figure>`:''}<section class="my-note"><label for="note">Моя заметка</label><textarea id="note" rows="4" placeholder="Вопрос спикеру или мысль, которую хочется сохранить">${esc(notes[id]||'')}</textarea><button id="note-save">Сохранить заметку</button><span id="note-status" role="status"></span><button id="detail-later">${later.has(id)?'Убрать из списка записей':'Посмотрю в записи'}</button></section>`);
+ $('#detail-save').insertAdjacentHTML('afterend',`<div id="detail-actions" class="detail-actions"><button id="detail-later">${later.has(id)?'Убрать из списка записей':'Посмотрю в записи'}</button></div>`);
+ modal.insertAdjacentHTML('beforeend',`${t.poster?`<figure class="detail-poster"><img src="${t.poster}" alt="Постер: ${esc(t.name)}"></figure>`:''}<section class="my-note"><label for="note">Моя заметка</label><textarea id="note" rows="4" placeholder="Вопрос спикеру или мысль, которую хочется сохранить">${esc(notes[id]||'')}</textarea><button id="note-save">Сохранить заметку</button><span id="note-status" role="status"></span></section>`);
  $('#note-save').onclick=()=>{notes[id]=$('#note').value;extraStore();$('#note-status').textContent='Сохранено';render()};
  $('#detail-later').onclick=()=>{toggleLater(id);details(id)};
 };

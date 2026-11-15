@@ -5,6 +5,10 @@ import mimetypes
 import hashlib
 import json
 import re
+import sys
+from io import BytesIO
+from urllib.request import urlopen
+from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
 from pathlib import Path
 
@@ -51,6 +55,37 @@ verified_ids = set()
 saved_pages = sorted(ROOT.glob('Матемаркетинг_??_11.html'))
 if not saved_pages and (ROOT / 'Матемаркетинг.html').exists():
     saved_pages = [ROOT / 'Матемаркетинг.html']
+portrait_cache = ROOT / 'speaker_photos'
+def portrait_path(source):
+    return portrait_cache / (hashlib.sha256(source.encode()).hexdigest() + '.webp')
+
+def portrait_thumbnail(asset):
+    from PIL import Image, ImageOps
+    with Image.open(asset) as original:
+        image = ImageOps.exif_transpose(original).convert('RGB')
+        image.thumbnail((160, 160), Image.Resampling.LANCZOS)
+        output = BytesIO()
+        image.save(output, format='WEBP', quality=85)
+        return 'data:image/webp;base64,' + base64.b64encode(output.getvalue()).decode()
+
+if '--download-portraits' in sys.argv:
+    from bs4 import BeautifulSoup
+    sources = set()
+    for saved_page in saved_pages:
+        soup = BeautifulSoup(saved_page.read_text(encoding='utf-8'), 'html.parser')
+        sources.update(img['src'] for img in soup.select('.talk-card__speaker-photo[src]')
+                       if img['src'].startswith('https://storage.yandexcloud.net/'))
+    portrait_cache.mkdir(exist_ok=True)
+    def download_portrait(source):
+        target = portrait_path(source)
+        if not target.exists():
+            with urlopen(source, timeout=30) as response:
+                data = response.read()
+                assert data[:4] == b'RIFF' and data[8:12] == b'WEBP', f'Expected WebP portrait: {source}'
+            target.write_bytes(data)
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        list(pool.map(download_portrait, sorted(sources)))
+    print(f'Cached {len(sources)} speaker portraits.')
 for saved_page in saved_pages:
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(saved_page.read_text(encoding='utf-8'), 'html.parser')
@@ -65,6 +100,16 @@ for saved_page in saved_pages:
         matched = [t for t in talks if t['name'] == name and t['day'] == day]
         if len(matched) == 1:
             talk = matched[0]
+            talk['portraits'] = []
+            for speaker in card.select('.talk-card__speaker'):
+                photo = speaker.select_one('.talk-card__speaker-photo[src]')
+                speaker_name = speaker.select_one('.talk-card__speaker-name')
+                if photo and speaker_name:
+                    source = photo['src']
+                    asset = portrait_path(source) if source.startswith('https://') else (ROOT / source).resolve()
+                    if asset.is_relative_to(ROOT) and asset.is_file():
+                        talk['portraits'].append(dict(name=speaker_name.get_text(' ', strip=True),
+                            src=portrait_thumbnail(asset)))
             if banner:
                 source = banner.get('src', '')
                 if source.startswith('./'):
@@ -158,6 +203,8 @@ report = {'source': ['program_6.csv', 'program_6.md'], 'csv_records': len(rows),
           'missing_halls': [t['name'] for t in talks if not t['room']],
           'saved_page_cards_matched': len(verified_ids),
           'talks_with_speaker_details_from_html': enriched,
+          'talks_with_portraits': sum(bool(t.get('portraits')) for t in talks),
+          'speaker_portraits': sum(len(t.get('portraits', [])) for t in talks),
           'html_audit': page_audit}
 (ROOT / 'IMPORT_REPORT.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
 print(f'Imported {len(talks)} records; all CSV and Markdown entries matched.')

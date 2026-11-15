@@ -38,6 +38,8 @@
   "missing_halls": [],
   "saved_page_cards_matched": 90,
   "talks_with_speaker_details_from_html": 82,
+  "talks_with_portraits": 78,
+  "speaker_portraits": 88,
   "html_audit": [
     {
       "file": "Матемаркетинг_17_11.html",

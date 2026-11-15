@@ -39,7 +39,7 @@ function compactCard(t){
  return `<article class="event compact-event ${chosen.has(t.id)?'is-chosen':''}">
  <div class="card-schedule"><span class="venue">${esc(t.room)}</span><span>${t.start}–${t.end}</span></div>
  ${extras.view==='photos'&&t.poster?`<button class="card-image" data-detail="${t.id}" aria-label="Открыть доклад: ${esc(t.name)}"><img src="${t.poster}" alt="" loading="lazy" decoding="async"></button>`:''}
- <div class="compact-content"><div><button class="title" data-detail="${t.id}"><h3>${esc(t.name)}</h3></button>${t.speaker?`<p class="speaker">${esc(t.speaker)}</p>`:''}</div>${extras.view!=='photos'&&t.poster?`<button class="speaker-picture" data-detail="${t.id}" aria-label="Открыть доклад: ${esc(t.name)}"><img src="${t.poster}" alt="" loading="lazy" decoding="async"></button>`:''}</div>
+ <div class="compact-content"><div><button class="title" data-detail="${t.id}"><h3>${esc(t.name)}</h3></button>${t.speaker?`<p class="speaker">${esc(t.speaker)}</p>`:''}</div>${extras.view!=='photos'?`<div class="speaker-portraits">${(t.portraits||[]).map(p=>`<button class="speaker-picture" data-detail="${t.id}" aria-label="Открыть доклад: ${esc(t.name)}"><img src="${p.src}" alt="${esc(p.name)}" loading="lazy" decoding="async"></button>`).join('')}</div>`:''}</div>
  ${extras.view==='expanded'?`<p class="excerpt">${esc(t.summary||'')}</p>`:''}
  <div class="compact-actions"><button class="save" data-save="${t.id}" aria-pressed="${chosen.has(t.id)}" aria-label="${chosen.has(t.id)?'Убрать из программы':'Добавить в программу'}: ${esc(t.name)}">${chosen.has(t.id)?'✓ Пойду':'+ Пойду'}</button>${selection?`<button data-compare="${t.id}" aria-pressed="${compareIds.has(t.id)}">${compareIds.has(t.id)?'✓ Выбрано':'Выбрать для сравнения'}</button>`:''}${notes[t.id]?'<span class="meta">Есть заметка</span>':''}</div>
  ${clash.length?`<div class="conflict">Пересекается с выбранным докладом<button class="text-action" data-pair="${t.id},${clash[0].id}">Сравнить и решить</button></div>`:''}</article>`;
@@ -51,7 +51,7 @@ render=function(){
  $('#mine').setAttribute('aria-pressed',mine);$('#all').setAttribute('aria-pressed',!mine);
  const active=[hall,extras.company,extras.speaker,extras.topic,extras.length,extras.after].filter(Boolean).length;
  const availableTracks=[...new Set(talks.filter(t=>t.day===day).map(t=>t.track).filter(Boolean))];
- $('#trackbar').innerHTML=`<button id="official-tracks" ${availableTracks.length?'':'disabled'} aria-haspopup="dialog"><span>Треки</span><strong>${!availableTracks.length?'Для онлайн-дня не указаны':extras.officialTrack==='__none'?'Без указанного трека':extras.officialTrack?esc(trackLabel(extras.officialTrack)):'Все направления'}</strong><span aria-hidden="true">⌄</span></button>`;
+ $('#trackbar').innerHTML=`<button id="official-tracks" ${availableTracks.length?'':'disabled'} aria-haspopup="dialog"><span>Треки</span><strong>${!availableTracks.length?'Для онлайн-дня не указаны':extras.officialTrack==='__none'?'Без указанного трека':extras.officialTrack?esc(trackLabel(extras.officialTrack)):'Все направления'}</strong><svg class="track-chevron" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m4 6 4 4 4-4"/></svg></button>`;
  $('#official-tracks').onclick=officialTracksDialog;
  $('#filters').textContent=`Фильтры${active?' · '+active:''}`;
  $('#count').textContent=`${visible.length} событий${hall?' · '+hall:''}${extras.company?' · '+extras.company:''}${extras.topic?' · '+extras.topic:''}`;
@@ -112,7 +112,7 @@ $('#list').onclick=e=>{
 const detailedView=details;
 details=function(id){
  detailedView(id);
- modal.insertAdjacentHTML('beforeend',`<button id="detail-compare">${compareIds.has(id)?'Убрать из сравнения':'Добавить к сравнению'}</button>`);
+ $('#detail-actions').insertAdjacentHTML('beforeend',`<button id="detail-compare">${compareIds.has(id)?'Убрать из сравнения':'Добавить к сравнению'}</button>`);
  $('#detail-compare').onclick=()=>{if(compareIds.has(id))compareIds.delete(id);else if(compareIds.size<2)compareIds.add(id);else{$('#status').textContent='Сначала сбрось выбранную пару для сравнения.';modal.close();return}render();modal.close();if(compareIds.size===2)showComparison()};
  modal.insertAdjacentHTML('beforeend','<div class="detail-footer"><button id="detail-close-bottom">Закрыть</button></div>');
  $('#detail-close-bottom').onclick=()=>modal.close();

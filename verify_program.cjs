@@ -108,4 +108,18 @@ run("setDay('17')");
 assert(node('#personal').innerHTML.includes('Пойду · 0'));
 assert(node('#personal').innerHTML.includes('Посмотрю в записи · 0'));
 assert.equal(node('#mine').textContent,'Моя программа · 2');
-console.log('PASS: 92 records, three days, halls, search, legacy selections, persistence, details, conflicts and boundary cases.');
+assert.equal(run('talks.filter(t=>t.portraits?.length).length'),78);
+assert.equal(run('talks.reduce((n,t)=>n+(t.portraits?.length||0),0)'),88);
+assert(run('talks.every(t=>(t.portraits||[]).every(p=>p.name && t.speaker.includes(p.name) && p.src.startsWith("data:image/webp;base64,")))'));
+for(const view of ['list','expanded']){
+ run(`extras.view='${view}'`);
+ const card=run('compactCard(talks.find(t=>t.portraits?.length>1))');
+ assert(card.includes('speaker-portraits'));
+ assert.equal((card.match(/class="speaker-picture"/g)||[]).length,run('talks.find(t=>t.portraits?.length>1).portraits.length'));
+ assert(!run('compactCard({...talks[0],portraits:[]})').includes('speaker-picture'));
+ assert(!run('compactCard({...talks[0],poster:"POSTER_ONLY"})').includes('POSTER_ONLY'));
+}
+run("extras.view='photos'");
+assert(run('compactCard(talks.find(t=>t.poster))').includes('card-image'));
+assert(!run('compactCard(talks.find(t=>t.portraits?.length))').includes('speaker-portraits'));
+console.log('PASS: 92 records, three days, halls, search, legacy selections, persistence, details, conflicts, portraits and boundary cases.');

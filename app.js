@@ -40,7 +40,7 @@ function render(){
 let returnFocus=null;
 function openDialog(html){
   if(!modal.open)returnFocus=document.activeElement;
-  modal.innerHTML='<button class="close" type="button" aria-label="Закрыть" title="Закрыть" autofocus><span aria-hidden="true">×</span></button>'+html;
+  modal.innerHTML='<button class="close" type="button" aria-label="Закрыть" title="Закрыть" autofocus><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6L18 18M18 6L6 18"/></svg></button>'+html;
   modal.querySelector('.close').onclick=()=>modal.close();
   if(!modal.open)modal.showModal();
   modal.scrollTop=0;
