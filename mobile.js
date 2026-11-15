@@ -33,6 +33,23 @@ function openSearchResult(id){
  resetExtras();query=requestedQuery;$('#search').value=requestedQuery;mine=false;
  setDay(result.day);
 }
+function activeFilterItems(){
+ return [
+  ['query',query,`Поиск: ${query}`],['hall',hall,`Зал: ${hall}`],
+  ['company',extras.company,extras.company],['speaker',extras.speaker,extras.speaker],
+  ['length',extras.length,`До ${extras.length} минут`],['after',extras.after,`Не раньше ${extras.after}`],
+  ['topic',extras.topic,extras.topic],['officialTrack',extras.officialTrack,trackLabel(extras.officialTrack)]
+ ].filter(([,value])=>value);
+}
+function removeActiveFilter(key){
+ if(key==='hall')hall='';
+ else if(key==='query'){query='';$('#search').value=''}
+ else if(['company','speaker','length','after','topic','officialTrack'].includes(key))extras[key]='';
+ else return;
+ render();
+ const remaining=$('#active-filters').querySelector('button');
+ (remaining||$('#filters')).focus();
+}
 function compactCard(t){
  const clash=chosen.has(t.id)?conflicts(t):[];
  const selection=comparingTime!==null||compareIds.has(t.id);
@@ -56,7 +73,9 @@ render=function(){
  $('#filters').textContent=`Фильтры${active?' · '+active:''}`;
  $('#count').textContent=`${visible.length} событий${hall?' · '+hall:''}${extras.company?' · '+extras.company:''}${extras.topic?' · '+extras.topic:''}`;
  $('#reset').hidden=!active&&!query&&!extras.officialTrack;
- $('#toolbar').innerHTML='<button id="view-settings" class="text-action">Вид и порядок</button>';
+ const applied=activeFilterItems();
+ $('#toolbar').innerHTML=`<div id="active-filters" aria-label="Применённые фильтры" ${applied.length?'':'hidden'}>${applied.map(([key,,label])=>`<button type="button" data-remove-filter="${key}" aria-label="Убрать условие: ${esc(label)}"><span>${esc(label)}</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M6 6L18 18M18 6L6 18"/></svg></button>`).join('')}</div><button id="view-settings" class="text-action">Вид и порядок</button>`;
+ $('#active-filters').onclick=e=>{const button=e.target.closest('[data-remove-filter]');if(button)removeActiveFilter(button.dataset.removeFilter)};
  $('#view-settings').onclick=viewSettings;
  $('#personal').hidden=!mine;
  const goingToday=talks.filter(t=>t.day===day&&chosen.has(t.id)).length;

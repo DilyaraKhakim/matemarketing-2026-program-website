@@ -61,7 +61,7 @@ $('#list').onclick=e=>{
   if(detail)details(detail.dataset.detail);
   if(e.target.closest('#empty-action')){if(!query&&!hall)mine=false;query='';hall='';$('#search').value='';render()}
 };
-function setDay(value){day=value;hall='';document.querySelectorAll('[data-day]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.day===day));render()}
+function setDay(value){day=value;if(hall&&!talks.some(t=>t.day===day&&t.room===hall))hall='';document.querySelectorAll('[data-day]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.day===day));render()}
 document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>setDay(b.dataset.day));
 $('#search').oninput=e=>{query=e.target.value.trim();render()};
 $('#reset').onclick=()=>{query='';hall='';$('#search').value='';render()};

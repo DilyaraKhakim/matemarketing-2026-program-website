@@ -12,12 +12,14 @@ const topics={
  'Безопасность':/безопасност|утеч|персональн|152-фз|правов/i
 };
 const minutes=s=>Number(s.slice(0,2))*60+Number(s.slice(3));
-function extraStore(){try{localStorage.setItem('mm26-extra',JSON.stringify({later:[...later],notes}))}catch{$('#status').textContent='Изменения доступны только до закрытия страницы: браузер запретил сохранение.'}}
+function speakerNames(t){return (t.speaker||'').split(',').map(name=>name.trim()).filter(Boolean)}
+function daySpeakers(){return [...new Set(talks.filter(t=>t.day===day).flatMap(speakerNames))].sort((a,b)=>a.localeCompare(b,'ru'))}
+function extraStore(){try{localStorage.setItem('mm26-extra',JSON.stringify({later:[...later],notes}));return true}catch{$('#status').textContent='Изменения доступны только до закрытия страницы: браузер запретил сохранение.';return false}}
 function toggleLater(id){if(later.has(id))later.delete(id);else{later.add(id);if(chosen.has(id))save(id)}extraStore();render()}
 const oldSave=save;
 save=function(id){if(!chosen.has(id)&&later.has(id)){later.delete(id);extraStore()}oldSave(id)};
 filtered=function(){
- let result=talks.filter(t=>t.day===day&&(!mine||(extras.section==='later'?later.has(t.id):chosen.has(t.id)))&&(!hall||t.room===hall)&&(!extras.company||(t.companies||[]).includes(extras.company))&&(!extras.speaker||t.speaker===extras.speaker)&&(!extras.topic||topics[extras.topic].test(t.name+' '+t.summary))&&(!extras.length||minutes(t.end)-minutes(t.start)<=Number(extras.length))&&(!extras.after||t.start>=extras.after)&&normalize([t.name,t.speaker,t.speakerInfo,t.room,t.summary,t.description].join(' ')).includes(normalize(query)));
+ let result=talks.filter(t=>t.day===day&&(!mine||(extras.section==='later'?later.has(t.id):chosen.has(t.id)))&&(!hall||t.room===hall)&&(!extras.company||(t.companies||[]).includes(extras.company))&&(!extras.speaker||speakerNames(t).includes(extras.speaker))&&(!extras.topic||topics[extras.topic].test(t.name+' '+t.summary))&&(!extras.length||minutes(t.end)-minutes(t.start)<=Number(extras.length))&&(!extras.after||t.start>=extras.after)&&normalize([t.name,t.speaker,t.speakerInfo,t.room,t.summary,t.description].join(' ')).includes(normalize(query)));
  return result.sort(extras.sort==='title'?(a,b)=>a.name.localeCompare(b.name,'ru'):extras.sort==='late'?(a,b)=>b.start.localeCompare(a.start):(a,b)=>a.start.localeCompare(b.start)||a.room.localeCompare(b.room,'ru'));
 };
 function resetExtras(){extras.company='';extras.speaker='';extras.topic='';extras.length='';extras.after='';hall='';query='';$('#search').value=''}
@@ -55,7 +57,7 @@ render=function(){
 function filterDialog(){
  if(extras.view==='route'){extras.view='list';render()}
  const options=(values,selected)=>values.map(x=>`<option value="${esc(x)}" ${x===selected?'selected':''}>${esc(x)}</option>`).join('');
- openDialog(`<h2 id="dialog-title">Найти своё</h2><div class="filter-grid"><label>Зал<select id="f-hall"><option value="">Все залы</option>${options([...new Set(talks.filter(t=>t.day===day).map(t=>t.room))].sort(),hall)}</select></label><label>Компания<select id="f-company"><option value="">Все компании</option>${options([...new Set(talks.flatMap(t=>t.companies||[]))].sort(),extras.company)}</select></label><label>Спикер<select id="f-speaker"><option value="">Все спикеры</option>${options([...new Set(talks.filter(t=>t.day===day&&t.speaker).map(t=>t.speaker))].sort(),extras.speaker)}</select></label><label>Длительность<select id="f-length"><option value="">Любая</option>${['35','60','90'].map(x=>`<option value="${x}" ${extras.length===x?'selected':''}>До ${x} минут</option>`).join('')}</select></label><label>Начало не раньше<input id="f-after" type="time" value="${extras.after}"></label></div><button class="primary" id="f-apply">Показать доклады</button><button id="f-reset">Сбросить фильтры</button>`);
+ openDialog(`<h2 id="dialog-title">Найти своё</h2><div class="filter-grid"><label>Зал<select id="f-hall"><option value="">Все залы</option>${options([...new Set(talks.filter(t=>t.day===day).map(t=>t.room))].sort(),hall)}</select></label><label>Компания<select id="f-company"><option value="">Все компании</option>${options([...new Set(talks.flatMap(t=>t.companies||[]))].sort(),extras.company)}</select></label><label>Спикер<select id="f-speaker"><option value="">Все спикеры</option>${options(daySpeakers(),extras.speaker)}</select></label><label>Длительность<select id="f-length"><option value="">Любая</option>${['35','60','90'].map(x=>`<option value="${x}" ${extras.length===x?'selected':''}>До ${x} минут</option>`).join('')}</select></label><label>Начало не раньше<input id="f-after" type="time" value="${extras.after}"></label></div><button class="primary" id="f-apply">Показать доклады</button><button id="f-reset">Сбросить фильтры</button>`);
  $('#f-apply').onclick=()=>{hall=$('#f-hall').value;extras.company=$('#f-company').value;extras.speaker=$('#f-speaker').value;extras.length=$('#f-length').value;extras.after=$('#f-after').value;render();modal.close()};
  $('#f-reset').onclick=()=>{resetExtras();render();modal.close()};
 }
@@ -63,8 +65,9 @@ const baseDetails=details;
 details=function(id){
  baseDetails(id);const t=talks.find(t=>t.id===id);
  $('#detail-save').insertAdjacentHTML('afterend',`<div id="detail-actions" class="detail-actions"><button id="detail-later">${later.has(id)?'Убрать из списка записей':'Посмотрю в записи'}</button></div>`);
- modal.insertAdjacentHTML('beforeend',`${t.poster?`<figure class="detail-poster"><img src="${t.poster}" alt="Постер: ${esc(t.name)}"></figure>`:''}<section class="my-note"><label for="note">Моя заметка</label><textarea id="note" rows="4" placeholder="Вопрос спикеру или мысль, которую хочется сохранить">${esc(notes[id]||'')}</textarea><button id="note-save">Сохранить заметку</button><span id="note-status" role="status"></span></section>`);
- $('#note-save').onclick=()=>{notes[id]=$('#note').value;extraStore();$('#note-status').textContent='Сохранено';render()};
+ modal.insertAdjacentHTML('beforeend',`${t.poster?`<figure class="detail-poster"><img src="${t.poster}" alt="Постер: ${esc(t.name)}"></figure>`:''}<section class="my-note"><label for="note">Моя заметка</label><textarea id="note" rows="4" aria-describedby="note-status" placeholder="Вопрос спикеру или мысль, которую хочется сохранить">${esc(notes[id]||'')}</textarea><span id="note-status" role="status">Сохраняется автоматически на этом устройстве</span></section>`);
+ const saveNote=()=>{const hadNote=Boolean(notes[id]);notes[id]=$('#note').value;const saved=extraStore();$('#note-status').textContent=saved?'Сохранено':'Не удалось сохранить на устройстве. Не закрывайте страницу.';if(hadNote!==Boolean(notes[id]))render()};
+ $('#note').oninput=saveNote;
  $('#detail-later').onclick=()=>{toggleLater(id);details(id)};
 };
 function showComparison(){

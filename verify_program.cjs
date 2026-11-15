@@ -122,4 +122,47 @@ for(const view of ['list','expanded']){
 run("extras.view='photos'");
 assert(run('compactCard(talks.find(t=>t.poster))').includes('card-image'));
 assert(!run('compactCard(talks.find(t=>t.portraits?.length))').includes('speaker-portraits'));
-console.log('PASS: 92 records, three days, halls, search, legacy selections, persistence, details, conflicts, portraits and boundary cases.');
+run("resetExtras();mine=false;setDay('26');extras.company='Яндекс';extras.length='35';extras.after='12:00';query='<test>';render()");
+assert.equal(run('activeFilterItems().length'),4);
+assert(node('#toolbar').innerHTML.includes('Не раньше 12:00'));
+assert(node('#toolbar').innerHTML.includes('&lt;test&gt;'));
+run("removeActiveFilter('length')");
+assert.equal(run('extras.length'),'');assert.equal(run('extras.company'),'Яндекс');
+assert.equal(run('extras.after'),'12:00');assert.equal(run('query'),'<test>');
+run("removeActiveFilter('query')");assert.equal(node('#search').value,'');
+run('resetExtras();render()');assert.equal(run('activeFilterItems().length'),0);
+const noteId=run('talks[0].id');
+run('details(talks[0].id)');
+node('#note').value='Вопрос <спикеру>';node('#note').oninput();
+assert.equal(JSON.parse(storage.get('mm26-extra')).notes[noteId],'Вопрос <спикеру>');
+assert.equal(node('#note-status').textContent,'Сохранено');
+node('#detail-close-bottom').onclick();run('details(talks[0].id)');
+assert(node('#modal').innerHTML.includes('Вопрос &lt;спикеру&gt;'));
+node('#note').value='';node('#note').oninput();
+assert.equal(JSON.parse(storage.get('mm26-extra')).notes[noteId],'');
+const originalSetItem=ctx.localStorage.setItem;
+ctx.localStorage.setItem=()=>{throw new Error('Storage blocked')};
+node('#note').value='Не потерять';node('#note').oninput();
+assert(node('#note-status').textContent.includes('Не удалось сохранить'));
+assert.equal(run('notes[talks[0].id]'),'Не потерять');
+ctx.localStorage.setItem=originalSetItem;
+node('#note').oninput();assert.equal(node('#note-status').textContent,'Сохранено');
+run("resetExtras();mine=false;setDay('26');hall='Атом';setDay('27')");
+assert.equal(run('hall'),'Атом');
+assert(run("filtered().length>0&&filtered().every(t=>t.room==='Атом')"));
+run("setDay('17')");assert.equal(run('hall'),'');assert.equal(run('filtered().length'),15);
+for(const testDay of ['17','26','27']){
+ run(`resetExtras();setDay('${testDay}')`);
+ assert(run('daySpeakers().every(name=>name && !name.includes(","))'));
+ const jointIds=run('talks.filter(t=>t.day===day&&speakerNames(t).length>1).map(t=>t.id)');
+ for(const id of jointIds){
+  const names=run(`speakerNames(talks.find(t=>t.id===${JSON.stringify(id)}))`);
+  for(const name of names){
+   run(`extras.speaker=${JSON.stringify(name)}`);
+   assert(run(`filtered().some(t=>t.id===${JSON.stringify(id)})`));
+   assert(run('filtered().every(t=>speakerNames(t).includes(extras.speaker))'));
+   assert(run('daySpeakers().includes(extras.speaker)'));
+  }
+ }
+}
+console.log('PASS: program data, filters, hall preservation, individual speakers, note autosave and storage failure, portraits, calendar and personal schedule.');
