@@ -11,6 +11,10 @@ try {
 let day='26',mine=false,hall='',query='';
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function normalize(s){return s.toLocaleLowerCase('ru').replaceAll('ё','е')}
+// Display-only typography; leave source data, input values and exports untouched.
+function readableText(value){
+ return String(value).split(/((?:https?:\/\/|www\.)\S+|[\w.+-]+@[\w.-]+\.[a-z]{2,})/gi).map((part,i)=>i%2?part:part.replace(/(^|[^\p{L}\p{N}_])(без|для|до|за|из|из-за|из-под|к|ко|между|на|над|о|об|обо|от|перед|по|под|при|про|с|со|у|в|во|через)[ \t]+(?=[\p{L}\p{N}«„“"'(])/giu,'$1$2\u00a0')).join('');
+}
 function overlaps(a,b){return a.id!==b.id&&a.day===b.day&&a.start<b.end&&b.start<a.end}
 function conflicts(t){return talks.filter(x=>chosen.has(x.id)&&overlaps(t,x))}
 function save(id){
@@ -47,7 +51,11 @@ function openDialog(html){
 }
 modal.addEventListener('close',()=>{
   if(returnFocus?.isConnected)returnFocus.focus();
-  else if(returnFocus?.dataset.detail)document.querySelector(`[data-detail="${returnFocus.dataset.detail}"]`)?.focus();
+  let replacement=returnFocus?.id?document.getElementById(returnFocus.id):null;
+  for(const [key,attribute] of [['detail','data-detail'],['save','data-save'],['groupCompare','data-group-compare'],['section','data-section'],['personalView','data-personal-view']]){
+    if(!replacement&&returnFocus?.dataset[key])replacement=document.querySelector(`[${attribute}="${returnFocus.dataset[key]}"]`);
+  }
+  if(!returnFocus?.isConnected)(replacement||$('#mine')).focus();
 });
 function details(id){
   const t=talks.find(t=>t.id===id);

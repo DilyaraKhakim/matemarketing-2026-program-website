@@ -100,13 +100,13 @@ assert(node('#modal').innerHTML.indexOf('id="detail-close-bottom"')>node('#modal
 node('#detail-close-bottom').onclick();assert.equal(node('#modal').open,false);
 run("resetExtras();mine=true;chosen.clear();later.clear();chosen.add(talks.find(t=>t.day==='26').id);chosen.add(talks.find(t=>t.day==='27').id);later.add(talks.filter(t=>t.day==='27')[1].id);setDay('26')");
 assert(node('#personal').innerHTML.includes('Пойду · 1'));
-assert(node('#personal').innerHTML.includes('Посмотрю в записи · 0'));
+assert(node('#personal').innerHTML.includes('В записи · 0'));
 run("setDay('27')");
 assert(node('#personal').innerHTML.includes('Пойду · 1'));
-assert(node('#personal').innerHTML.includes('Посмотрю в записи · 1'));
+assert(node('#personal').innerHTML.includes('В записи · 1'));
 run("setDay('17')");
 assert(node('#personal').innerHTML.includes('Пойду · 0'));
-assert(node('#personal').innerHTML.includes('Посмотрю в записи · 0'));
+assert(node('#personal').innerHTML.includes('В записи · 0'));
 assert.equal(node('#mine').textContent,'Моя программа · 2');
 assert.equal(run('talks.filter(t=>t.portraits?.length).length'),78);
 assert.equal(run('talks.reduce((n,t)=>n+(t.portraits?.length||0),0)'),88);
@@ -165,4 +165,34 @@ for(const testDay of ['17','26','27']){
   }
  }
 }
-console.log('PASS: program data, filters, hall preservation, individual speakers, note autosave and storage failure, portraits, calendar and personal schedule.');
+run("resetExtras();mine=true;extras.section='going';setDay('26');chosen.clear();later.clear();modal.open=false;chosen.add(talks[0].id);save(talks[0].id)");
+assert(run('!chosen.has(talks[0].id)&&undoSelection.going&&!undoSelection.recording'));
+run('restoreSelection()');assert(run('chosen.has(talks[0].id)&&!later.has(talks[0].id)'));
+run('toggleLater(talks[0].id)');assert(run('!chosen.has(talks[0].id)&&later.has(talks[0].id)'));
+run('restoreSelection()');assert(run('chosen.has(talks[0].id)&&!later.has(talks[0].id)'));
+assert(JSON.parse(storage.get('mm26-chosen')).includes(run('talks[0].id')));
+run('toggleLater(talks[0].id);toggleLater(talks[0].id);restoreSelection()');
+assert(run('!chosen.has(talks[0].id)&&later.has(talks[0].id)'));
+run("mine=false;resetExtras();hall='Атом';extras.after='14:00';render()");
+assert(run("jumpTimes().length>0&&jumpTimes().every(time=>time>='14:00'&&filtered().some(t=>t.start===time&&t.room==='Атом'))"));
+run("query='no-match-987654';render()");assert.equal(run('jumpTimes().length'),0);
+run("resetExtras();mine=true;extras.section='going';extras.view='route';render()");
+assert(node('#personal').innerHTML.includes('data-personal-view="route" aria-pressed="true"'));
+run("extras.section='later';render()");assert.notEqual(run('extras.view'),'route');
+assert(!node('#personal').innerHTML.includes('data-personal-view'));
+for(const [n,word] of [[1,'событие'],[2,'события'],[11,'событий'],[21,'событие'],[39,'событий']])assert.equal(run(`eventCount(${n})`),`${n} ${word}`);
+assert.equal(run("readableText('В программе и на встрече с командой')"),'В\u00a0программе и на\u00a0встрече с\u00a0командой');
+assert.equal(run("readableText('из-за ошибки, ОБ аналитике; по данным')"),'из-за\u00a0ошибки, ОБ\u00a0аналитике; по\u00a0данным');
+assert.equal(run("readableText('слово завтра https://example.org/в новости')"),'слово завтра https://example.org/в новости');
+assert.equal(run("readableText('в\\nпрограмме')"),'в\nпрограмме');
+assert.equal(run("readableText(readableText('в программе'))"),'в\u00a0программе');
+run("resetExtras();mine=true;extras.section='going';chosen=new Set(talks.filter(t=>t.day==='26').map(t=>t.id));setDay('26')");
+assert.equal(node('#count').hidden,true);
+assert.equal(node('#trackbar').hidden,true);
+assert.equal(node('#personal-tracks').hidden,false);
+run("hall='Атом';render()");
+assert.equal(node('#count').hidden,false);
+assert.equal(node('#count').textContent,`Показано ${run('filtered().length')} из 39`);
+run("resetExtras();render()");assert.equal(node('#count').hidden,true);
+run("mine=false;render()");assert.equal(node('#count').hidden,false);assert.equal(node('#trackbar').hidden,false);
+console.log('PASS: program, filters, notes, calendar, undo, plan, time jumps, typography and personal counters.');
